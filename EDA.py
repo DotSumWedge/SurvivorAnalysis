@@ -47,5 +47,12 @@ for csv_file in csv_files:
     dataframes[csv_file] = df
     
     # Print the head of the DataFrame
-    print(f'{csv_file}:')
-    print(df.head())
+    # print(f'{csv_file}:')
+    # print(df.head())
+    
+# Print out the head of the castaways.csv data
+print(dataframes['castaways.csv'].head())
+
+# Create a violin plot of the age column from the castaways.csv data
+sns.violinplot(x=dataframes['castaways.csv']['age'])
+plt.show()
