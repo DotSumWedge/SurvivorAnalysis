@@ -50,11 +50,19 @@ for csv_file in csv_files:
     # print(f'{csv_file}:')
     # print(df.head())
 
-# Show the number of contestents in the survivor data
-print('Number of contestents:', len(dataframes['castaways.csv']))
-
-# Show the number of unique values and data type for each column of the castaways.csv data
-print(pd.concat([dataframes['castaways.csv'].nunique(), dataframes['castaways.csv'].dtypes], axis=1))
+# Loop through each DataFrame in the dataframes dictionary
+for csv_file, df in dataframes.items():
+    # Print the name of the CSV file
+    print(csv_file)
+    
+    # Show the number of rows in the DataFrame
+    print('Number of rows:', len(df))
+    
+    # Show the number of unique values and data type for each column of the DataFrame
+    print(pd.concat([df.nunique(), df.dtypes], axis=1))
+    
+    # Print a separator
+    print('-' * 40)
 
 # Create a violin plot of the age column from the castaways.csv data
 sns.violinplot(x=dataframes['castaways.csv']['age'])
