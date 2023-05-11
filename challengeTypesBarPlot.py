@@ -31,3 +31,23 @@ for csv_file in csv_files:
     # Print the head of the DataFrame
     print(f'{csv_file}:')
     print(df.describe())
+
+# Count the number of TRUE values in each column from the 3rd column onward
+true_counts = (dataframes['challenge_description.csv'].iloc[:, 2:] == True).sum()
+
+# Count the number of TRUE values in each column from the 3rd column onward
+true_counts = (dataframes['challenge_description.csv'].iloc[:, 2:] == True).sum()
+
+# Create a bar chart showing the number of TRUE values in each column
+true_counts.plot(kind='bar')
+
+# Add labels and title
+plt.xlabel('Column')
+plt.ylabel('Number of challanges')
+plt.title('Number of each type of challange')
+
+# Rotate x-axis labels by 90 degrees
+plt.xticks(rotation=90)
+
+# Show the plot
+plt.show()

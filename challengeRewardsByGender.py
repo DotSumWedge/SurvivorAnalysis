@@ -31,3 +31,23 @@ for csv_file in csv_files:
     # Print the head of the DataFrame
     print(f'{csv_file}:')
     print(df.describe())
+
+# Merge challenge_results and castaway_details dataframes on castaway_id
+merged_df = pd.merge(dataframes['challenge_results.csv'], dataframes['castaway_details.csv'], on='castaway_id')
+
+# Group data by challenge type and gender and count number of challenges won by each group
+grouped_df = merged_df.groupby(['challenge_type', 'gender'])['challenge_id'].count().unstack()
+
+# Create a stacked bar chart
+grouped_df.plot.bar(stacked=True)
+
+# Add labels and title
+plt.xlabel('Challenge Type')
+plt.ylabel('Number of Challenges Won')
+plt.title('Number of Challenges Won by Gender')
+
+# Rotate x-axis labels by 90 degrees
+plt.xticks(rotation=90)
+
+# Show the plot
+plt.show()
