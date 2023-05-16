@@ -28,15 +28,28 @@ for csv_file in csv_files:
     # Store the DataFrame in the dictionary
     dataframes[csv_file] = df
 
-    # Print the head of the DataFrame
-    print(f'{csv_file}:')
-    print(df.describe())
+# Remove the last 2 characters of challange_id so it can be used a primary key
+dataframes['challenge_description.csv']['challenge_id'] = dataframes['challenge_description.csv']['challenge_id'].str[:-2]
 
 # Merge challenge_results and castaway_details dataframes on castaway_id
-merged_df = pd.merge(dataframes['challenge_results.csv'], dataframes['castaway_details.csv'], on='castaway_id')
+castaway_results = pd.merge(dataframes['challenge_results.csv'], dataframes['castaway_details.csv'], on='castaway_id')
+
+# Merge challenge_results and challenge_description dataframes on challenge_id
+challenge_df = pd.merge(castaway_results, dataframes['challenge_description.csv'], on='challenge_id')
+
+# Count the number of TRUE values in each column from the 3rd column onward
+challenge_category_counts = (dataframes['challenge_description.csv'].iloc[:, 2:] == True).sum()
+
+print(challenge_df)
+
+print(challenge_category_counts)
+
+print("----")
 
 # Group data by challenge type and gender and count number of challenges won by each group
-grouped_df = merged_df.groupby(['challenge_type', 'gender'])['challenge_id'].count().unstack()
+grouped_df = castaway_results.groupby(['challenge_type', 'gender'])['challenge_id'].count().unstack()
+
+#print(grouped_df)
 
 # Create a stacked bar chart
 grouped_df.plot.bar(stacked=True)
