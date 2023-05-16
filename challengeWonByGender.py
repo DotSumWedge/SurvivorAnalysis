@@ -35,35 +35,32 @@ dataframes['challenge_description.csv']['challenge_id'] = dataframes['challenge_
 castaway_results = pd.merge(dataframes['challenge_results.csv'], dataframes['castaway_details.csv'], on='castaway_id')
 
 # Merge challenge_results and challenge_description dataframes on challenge_id
-challenge_df = pd.merge(castaway_results, dataframes['challenge_description.csv'], on='challenge_id')
+challenges = pd.merge(castaway_results, dataframes['challenge_description.csv'], on='challenge_id')
 
-# Count the number of TRUE values in each column from the 3rd column onward
-challenge_category_counts = (dataframes['challenge_description.csv'].iloc[:, 2:] == True).sum()
+# Count the number of challenge categories won grouped by gender
+challenges_counts_grouped = (challenges.set_index('gender').iloc[:, 29:] == True).stack().groupby(level=[0, 1]).sum().unstack(level=0)
 
-print(challenge_df)
+print(challenges_counts_grouped)
 
-print(challenge_category_counts)
-
-print("----")
-
-# Group data by challenge type and gender and count number of challenges won by each group
-grouped_df = castaway_results.groupby(['challenge_type', 'gender'])['challenge_id'].count().unstack()
-
-#print(grouped_df)
+challenges_counts_grouped = challenges_counts_grouped[['Male', 'Female', 'Non-binary']]
 
 # Create a stacked bar chart
-grouped_df.plot.bar(stacked=True)
+bar_chart_axes = challenges_counts_grouped.plot.bar(stacked=True, color={'Male': '#87CEEB', 'Female': 'pink', 'Non-binary': 'green'})
 
 # Get the challenge types from challenge_description.csv
-challenge_types = dataframes['challenge_description.csv'].columns[2:]
+genders = dataframes['challenge_description.csv'].columns[2:]
 
 # Set the xtick labels to the challenge types
-plt.xticks(range(len(challenge_types)), challenge_types, rotation=90)
+plt.xticks(range(len(genders)), genders, rotation=90)
 
 # Add labels and title
-plt.xlabel('Challenge Type')
+plt.xlabel('Challenge Category')
 plt.ylabel('Number of Challenges Won')
 plt.title('Number of Challenges Won by Gender')
+
+# Change the order of the legend
+handles, labels = bar_chart_axes.get_legend_handles_labels()
+bar_chart_axes.legend(reversed(handles), reversed(labels))
 
 # Show the plot
 plt.show()
