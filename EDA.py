@@ -9,63 +9,99 @@ import sys
 import math
 import os
 
-# Get the path to the survivorData directory
-data_dir = os.path.join(os.path.dirname(__file__), '..', 'survivorData')
+castaways = pd.read_csv("C:/Users/bejes/OneDrive/School/ML/Code/Project1/survivorData/castaway_details.csv")
+castaway_details = pd.read_csv("C:/Users/bejes/OneDrive/School/ML/Code/Project1/survivorData/castaways.csv")
+c_results = pd.read_csv("C:/Users/bejes/OneDrive/School/ML/Code/Project1/survivorData/challenge_results.csv")
+screentime = pd.read_csv("C:/Users/bejes/OneDrive/School/ML/Code/Project1/survivorData/screen_time.csv")
 
-# List of CSV file names
-csv_files = [
-    'advantage_movement.csv',
-    'boot_mapping.csv',
-    'castaways.csv',
-    'castaway_details.csv',
-    'challenge_description.csv',
-    'challenge_results.csv',
-    'confessionals.csv',
-    'jury_votes.csv',
-    'screen_time.csv',
-    'season_palettes.csv',
-    'season_summary.csv',
-    'survivor_auction.csv',
-    'tribe_colours.csv',
-    'tribe_mapping.csv',
-    'viewers.csv',
-    'vote_history.csv'
-]
+merged_castaways = pd.merge(castaways, castaway_details, on ='castaway_id', how ="left")
+merged_data = pd.merge(c_results, castaways, on ='castaway_id', how ="left")
+merged_screen = pd.merge(merged_castaways, screentime, on ='castaway_id', how ="inner")
 
-# Create a dictionary to store the DataFrames
-dataframes = {}
+print("--------------------------------------------------------")
+print(merged_data.head(5))
+print("--------------------------------------------------------")
+print(merged_screen)
+print("--------------------------------------------------------")
 
-# Loop through each CSV file and read its data into a DataFrame
-for csv_file in csv_files:
-    # Specify the relative path to the CSV file
-    file_path = os.path.join(data_dir, csv_file)
-    
-    # Read the data from the CSV file into a pandas DataFrame
-    df = pd.read_csv(file_path)
-    
-    # Store the DataFrame in the dictionary
-    dataframes[csv_file] = df
-    
-    # Print the head of the DataFrame
-    # print(f'{csv_file}:')
-    # print(df.head())
 
-# Loop through each DataFrame in the dataframes dictionary
-for csv_file, df in dataframes.items():
-    # Print the name of the CSV file
-    print(csv_file)
-    
-    # Show the number of rows in the DataFrame
-    print('Number of rows:', len(df))
-    
-    # Show the number of unique values and data type for each column of the DataFrame
-    print(pd.concat([df.nunique(), df.dtypes], axis=1))
-    
-    # Print a separator
-    print('-' * 40)
+# Filter the dataset to include only rows where the result is 'Won'
+wins_df = merged_data[merged_data['result'] == 'Won']
 
-# Create a violin plot of the age column from the castaways.csv data
-sns.violinplot(x=dataframes['castaways.csv']['age'])
+# Count the number of wins by gender
+win_counts = wins_df['gender'].value_counts()
+
+# Create a pie chart
+plt.pie(win_counts, labels=win_counts.index, autopct='%1.1f%%')
+plt.title('Number of Wins by Gender')
+
+# Display the chart
 plt.show()
 
-print("Ben has a big brain")
+
+
+
+
+
+
+
+
+# Group by gender and type, and count the number of wins
+win_counts = wins_df.groupby(['gender', 'challenge_type']).size()
+
+# Create a separate pie chart for each gender
+fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
+
+# Iterate over each gender
+for i, gender in enumerate(['Male', 'Female']):
+    ax = axes[i]
+    gender_counts = win_counts.loc[gender]
+    ax.pie(gender_counts, labels=gender_counts.index, autopct='%1.1f%%')
+    ax.set_title(f'Number of Wins for {gender} by Type')
+
+# Adjust the layout
+plt.tight_layout()
+
+# Display the chart
+plt.show()
+
+
+
+
+
+
+# Count the occurrences of each gender
+gender_counts = castaways['gender'].value_counts()
+
+# Create a pie chart
+plt.pie(gender_counts, labels=gender_counts.index, autopct='%1.1f%%')
+plt.title('Count of Each Gender')
+
+# Display the chart
+plt.show()
+
+
+
+
+
+
+
+print("--------------------------------------------------------")
+# Group the dataset by 'person_id'
+df = merged_screen.groupby('castaway_id')
+
+# Calculate the average completion time for each person
+average_screen_time = df['screen_time'].mean()
+details = merged_castaways[['castaway_id','full_name_x','gender','result']]
+average_screen_time = pd.merge(average_screen_time, details, on ='castaway_id', how ="left")
+
+# Display the average completion time for each person
+#print(average_screen_time)
+print(average_screen_time.sort_values(by='screen_time', ascending=False) )
+print("--------------------------------------------------------")
+
+plt.plot(average_screen_time['result'], average_screen_time['screen_time'], marker='o')
+
+
+
+
