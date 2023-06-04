@@ -47,7 +47,7 @@ plt.ylabel('Number of Challenges Won')
 plt.title('Number of Challenges Won by Gender')
 
 # Rotate x-axis labels by 90 degrees
-plt.xticks(rotation=90)
+plt.xticks(rotation="vertical")
 
 # Adjust the bottom margin of the plot
 plt.gcf().subplots_adjust(bottom=0.2)

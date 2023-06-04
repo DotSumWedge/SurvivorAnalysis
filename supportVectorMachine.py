@@ -35,6 +35,9 @@ dataframes['castaways.csv']['result'] = dataframes['castaways.csv']['result'].ca
 X = dataframes['castaways.csv'].iloc[:, [7, 12]]
 y = dataframes['castaways.csv'].iloc[:, 13]
 
+print(X)
+print(y)
+
 # Handle missing values by filling them with the mean of the column
 X.fillna(X.mean(), inplace=True)
 
