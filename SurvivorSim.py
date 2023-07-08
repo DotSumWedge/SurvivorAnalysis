@@ -167,8 +167,19 @@ def person_prediction_support_vector_machine(remaining_contestants, x_train_curr
 
 # NOT WORKING
 # This is run after each person is eliminated 
-def generate_challenge_features(challenge_results, current_season, current_episode):
-    return challenge_results
+def generate_challenge_features(current_season, current_episode):
+    # Filter the challenge results to include only rows up to the current episode
+    challenge_results_current = challenge_results[(challenge_results['season'] == current_season) &
+                                                  (challenge_results['episode'] <= current_episode)]
+    
+    # Generate a DataFrame of the number of wins for each castaway
+    challenge_results_current = challenge_results_current[challenge_results_current['result'] == 'Won']\
+                        .groupby('castaway_id')['result'].count().reset_index()\
+                        .rename(columns={'result': 'challenge_wins'})
+
+    print("challenge_results_current:")
+    print(challenge_results_current)
+    return challenge_results_current
 
 
 # Perform leave-one-group-out cross-validation
@@ -193,8 +204,17 @@ for train_index, test_index in logo.split(season_split, groups=group_labels):
     number_of_contestants = len(x_test)
     order_out = 1
     correct_predictions = 0
+    
+    current_season = group_labels[test_index[0]] + 1
+    current_episode = 0
+    
+    print("season:")
+    print(current_season)
+    print("episode:")
+    print(current_episode)
 
     while len(x_test) > 0:
+        current_episode += 1
         age_eliminated = x_test.iloc[0]['age']
         gender_number_eliminated = x_test.iloc[0]['genderNumber']
         
@@ -217,11 +237,8 @@ for train_index, test_index in logo.split(season_split, groups=group_labels):
         x_test = x_test.iloc[1:]
         order_out = order_out + 1
         
-        current_season = 0
-        current_episode = 0
-        
         # Update x_test to include updated challenge results
-        challenge_features = generate_challenge_features(x_test, current_season, current_episode)
+        challenge_features = generate_challenge_features(current_season, current_episode)
         # x_test = x_test.merge(challenge_features, how='left', on='castaway_id')
 
     # Calculate and print the accuracy of the model
