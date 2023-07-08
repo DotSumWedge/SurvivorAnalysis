@@ -141,58 +141,12 @@ season_split = split_dataframe(castawayAll, 'version_season')
 for df in season_split:
     df['orderOut'] = range(1, len(df) + 1)
     
-def predict_elimination_order(df):
-    # Prepare the data
-    features = df[['age', 'genderNumber']]
-    target = df['orderOut']
-
-    # Initialize the model
-    #model = RandomForestRegressor()
-    model = RandomForestClassifier()
-    
-    # Train the model
-    model.fit(features, target)
-
-    # Make predictions
-    predictions = model.predict(features)
-
-    # Calculate the root mean square error (RMSE)
-    rmse = mean_squared_error(target, predictions, squared=False)
-
-    # print(f"Root Mean Square Error: {rmse}")
-    
-    # Return the order of elimination predictions
-    return predictions
-
-for i, df in enumerate(season_split):
-    # print(f"Predicting for season {i+1}")
-    predicted_order = predict_elimination_order(df)
-    # print(predicted_order)
-    
-# Use a random forest model that tries to predict the order the remaining contestants will be eliminated from the show.
+# Use a support vector machine model that tries to predict the order the remaining contestants will be eliminated from the show.
 #       Return the contestant remaining that has the lowest orderOut prediction
 #       An orderOut value of 1 means that person was the first eleminated and the hightest orderOut in that season is the winner
 #       x_train is the age and gender of contestants in the training set
 #       y_train is the orderOut for contestants in the training set
 #       current_order is the orderOut value that is being predicted
-def person_prediction_random_forest(remaining_contestants, x_train_current, y_train_current, current_order):
-    # Train the random forest model
-    model = RandomForestClassifier()
-    model.fit(x_train_current, y_train_current)
-
-    # Predict the order for the remaining contestants
-    x_test_current = remaining_contestants[['age', 'genderNumber']]
-    predicted_order = model.predict(x_test_current)
-
-    # Find the contestants with the smallest predicted order
-    min_predicted_order = np.min(predicted_order)
-    contestants_with_min_order = np.where(predicted_order == min_predicted_order)[0]
-
-    # Randomly select one contestant from those with the smallest predicted order
-    person_predicted = np.random.choice(contestants_with_min_order)
-
-    return person_predicted
-
 def person_prediction_support_vector_machine(remaining_contestants, x_train_current, y_train_current, current_order):
     # Train the support vector machien model using a "one-vs-rest" decision function shape
     model = svm.SVC(decision_function_shape='ovo')
@@ -214,22 +168,8 @@ def person_prediction_support_vector_machine(remaining_contestants, x_train_curr
 # NOT WORKING
 # This is run after each person is eliminated 
 def generate_challenge_features(challenge_results, current_season, current_episode):
-    # Filter the rows for the current season and episode
-    # current_results = challenge_results[(challenge_results['season'] == current_season) & (challenge_results['episode'] == current_episode)]
-    
-    # # Generate recent_challenge_result
-    # current_results['recent_challenge_result'] = current_results['result'].map({'Won': 1, 'Lost': 0})
-    
-    # # Generate total_wins_so_far
-    # total_wins = challenge_results[(challenge_results['season'] == current_season) & (challenge_results['episode'] <= current_episode) & (challenge_results['result'] == 'Won')].groupby('castaway_id').size()
-    # total_wins_df = total_wins.reset_index(name='total_wins_so_far')
-    
-    # # Merge recent_challenge_result and total_wins_so_far into current_results
-    # current_results = current_results.merge(total_wins_df, how='left', on='castaway_id')
-    # current_results['total_wins_so_far'].fillna(0, inplace=True)
-    
-    # return current_results[['castaway_id', 'recent_challenge_result', 'total_wins_so_far']]
     return challenge_results
+
 
 # Perform leave-one-group-out cross-validation
 logo = LeaveOneGroupOut()
