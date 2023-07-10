@@ -214,6 +214,7 @@ for train_index, test_index in logo.split(season_split, groups=group_labels):
     current_season_version = season_split[test_index[0]]['version_season'].iloc[0]
     current_season = group_labels[test_index[0]] + 1
     current_episode = 0
+    counter = 0
     
     # print("current_season_version")
     # print(current_season_version)
@@ -253,8 +254,11 @@ for train_index, test_index in logo.split(season_split, groups=group_labels):
         # Remove the first element of x_test
         x_test = x_test.iloc[1:]
         order_out = order_out + 1
-        
-        break
+          
+        counter += 1
+        # # If the counter is 3, break the loop
+        if counter == 3:
+            break
 
     # Calculate and print the accuracy of the model
     # print("----------")
@@ -272,16 +276,15 @@ for train_index, test_index in logo.split(season_split, groups=group_labels):
 def test_generate_challenge_features():
     # Create a DataFrame that mimics the structure of `challenge_results`
     challenge_results_test = pd.DataFrame({
-        'version_season': ['S1', 'S1', 'S1', 'S1', 'S2', 'S2'],
         'season': [1, 1, 1, 1, 2, 2],
         'episode': [1, 1, 2, 2, 1, 1],
         'castaway_id': ['A', 'B', 'A', 'B', 'A', 'B'],
-        'result': ['Won', 'Lost', 'Won', 'Won', 'Won', 'Lost']
+        'result': ['Won', 'Lost', 'Won', 'Won', 'Won', 'Lost'],
+        'version_season': ['S01', 'S01', 'S01', 'S01', 'S02', 'S02']  # Add this line
     })
     
-    # Test 1: Current version_season is 'S1' and current episode is 2
-    # Castaway A won twice, Castaway B won once
-    result = generate_challenge_features('S1', 1, 2, challenge_results_test)
+    # Test 1: Current season version is 'S01', current season is 1 and current episode is 2
+    result = generate_challenge_features('S01', 1, 2, challenge_results_test)
     expected_result = pd.DataFrame({
         'castaway_id': ['A', 'B'],
         'challenge_wins': [2, 1]
