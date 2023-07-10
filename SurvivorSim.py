@@ -165,22 +165,23 @@ def person_prediction_support_vector_machine(remaining_contestants, x_train_curr
 
     return person_predicted
 
-# NOT WORKING
-# This is run after each person is eliminated 
-def generate_challenge_features(current_season, current_episode):
-    # Filter the challenge results to include only rows up to the current episode
-    challenge_results_current = challenge_results[(challenge_results['season'] == current_season) &
+def generate_challenge_features(current_season_version, current_season, current_episode, challenge_results):
+    # Filter the challenge results to include only rows up to the current episode, from the current version season, and from the current season
+    challenge_results_current = challenge_results[(challenge_results['version_season'] == current_season_version) &
+                                                  (challenge_results['season'] == current_season) &
                                                   (challenge_results['episode'] <= current_episode)]
-    
+
     # Generate a DataFrame of the number of wins for each castaway
     challenge_results_current = challenge_results_current[challenge_results_current['result'] == 'Won']\
                         .groupby('castaway_id')['result'].count().reset_index()\
                         .rename(columns={'result': 'challenge_wins'})
 
-    print("challenge_results_current:")
-    print(challenge_results_current)
-    return challenge_results_current
+    # Set 'castaway_id' as the index
+    challenge_results_current.set_index('castaway_id', inplace=True)
 
+    # print("challenge_results_current:")
+    # print(challenge_results_current)
+    return challenge_results_current
 
 # Perform leave-one-group-out cross-validation
 logo = LeaveOneGroupOut()
@@ -200,26 +201,31 @@ for train_index, test_index in logo.split(season_split, groups=group_labels):
 
     x_test = pd.concat([season_split[i][['age', 'genderNumber']] for i in test_index])
     y_test = pd.concat([season_split[i][['orderOut']] for i in test_index])
+    
+    # print(x_test)
+    # print(y_test)
 
     number_of_contestants = len(x_test)
     order_out = 1
     correct_predictions = 0
     
+    
+    # UPDATE THIS LINE
+    current_season_version = season_split[test_index[0]]['version_season'].iloc[0]
     current_season = group_labels[test_index[0]] + 1
     current_episode = 0
     
-    print("season:")
-    print(current_season)
-    print("episode:")
-    print(current_episode)
+    # print("current_season_version")
+    # print(current_season_version)
+    # print("season:")
+    # print(current_season)
+    # print("episode:")
+    # print(current_episode)
 
     while len(x_test) > 0:
         current_episode += 1
         age_eliminated = x_test.iloc[0]['age']
         gender_number_eliminated = x_test.iloc[0]['genderNumber']
-        
-        # Select a person
-        prediction_person_index = person_prediction_support_vector_machine(x_test, x_train, y_train, order_out)
         
         # print("-------------------------------------")
         # print(f"Person prediction position: {prediction_person_index}")
@@ -229,17 +235,26 @@ for train_index, test_index in logo.split(season_split, groups=group_labels):
         # print(f"Person eleminated age: {age_eliminated}")
         # print("-------------------------------------")
         
+        # Update x_test to include updated challenge results
+        challenge_features = generate_challenge_features(current_season_version, current_season, current_episode, challenge_results)
+        
+        print("challenge_features")
+        print(challenge_features)
+        
+        # x_test = x_test.merge(challenge_features, how='left', on='castaway_id')
+        
+        # Select a person
+        prediction_person_index = person_prediction_support_vector_machine(x_test, x_train, y_train, order_out)
+        
         # Check if the prediction is correct
         if prediction_person_index == 0:
             correct_predictions += 1
-        
+            
         # Remove the first element of x_test
         x_test = x_test.iloc[1:]
         order_out = order_out + 1
         
-        # Update x_test to include updated challenge results
-        challenge_features = generate_challenge_features(current_season, current_episode)
-        # x_test = x_test.merge(challenge_features, how='left', on='castaway_id')
+        break
 
     # Calculate and print the accuracy of the model
     # print("----------")
@@ -252,4 +267,25 @@ for train_index, test_index in logo.split(season_split, groups=group_labels):
     
 # print(x_test)
 # print(y_test)
-print(accuracies_support_vector_machine)
+# print(accuracies_support_vector_machine)
+
+def test_generate_challenge_features():
+    # Create a DataFrame that mimics the structure of `challenge_results`
+    challenge_results_test = pd.DataFrame({
+        'version_season': ['S1', 'S1', 'S1', 'S1', 'S2', 'S2'],
+        'season': [1, 1, 1, 1, 2, 2],
+        'episode': [1, 1, 2, 2, 1, 1],
+        'castaway_id': ['A', 'B', 'A', 'B', 'A', 'B'],
+        'result': ['Won', 'Lost', 'Won', 'Won', 'Won', 'Lost']
+    })
+    
+    # Test 1: Current version_season is 'S1' and current episode is 2
+    # Castaway A won twice, Castaway B won once
+    result = generate_challenge_features('S1', 1, 2, challenge_results_test)
+    expected_result = pd.DataFrame({
+        'castaway_id': ['A', 'B'],
+        'challenge_wins': [2, 1]
+    }).set_index('castaway_id')
+    pd.testing.assert_frame_equal(result, expected_result)
+
+test_generate_challenge_features()
