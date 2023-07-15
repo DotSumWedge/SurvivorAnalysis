@@ -145,7 +145,7 @@ def person_prediction_support_vector_machine(remaining_contestants, x_train_curr
       y_train_current is the orderOut for contestants in the training set
       current_order is the orderOut value that is being predicted
     """
-
+    
     # Train the support vector machien model using a "one-vs-rest" decision function shape
     model = svm.SVC(decision_function_shape='ovo')
     model.fit(x_train_current, y_train_current)
@@ -208,9 +208,20 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
         
         # Update x_test to include updated challenge results
         challenge_features = generate_challenge_features(current_season_version, current_season, current_episode_number, challenge_results)
+
+        # Drop the 'challenge_wins' column from x_test if it exists
+        if 'challenge_wins' in x_test.columns:
+            x_test.drop('challenge_wins', axis=1, inplace=True)
         
+        # Merge challenge_features into x_test
         x_test = x_test.merge(challenge_features, how='left', on='castaway_id')
         
+        # Replace NaN values in 'challenge_wins' with 0
+        x_test['challenge_wins'].fillna(0, inplace=True)
+        
+        # TODO: Add appropiate challenge_wins data to x_train
+        print(x_train)
+                
         # Using the SVM model to make predictions on who will be eliminated next.
         prediction_person_index = person_prediction_support_vector_machine(x_test, x_train, y_train)
         
@@ -223,8 +234,8 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
           
         counter += 1
         # # If the counter is 3, break the loop
-        #if counter == 3:
-        break
+        if counter == 3:
+            break
 
     # Calculate and print the accuracy of the model
     accuracy = (correct_elimination_predictions / remaining_contestants) * 100
