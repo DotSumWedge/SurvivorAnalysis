@@ -79,9 +79,12 @@ dataframes['castaways.csv']['result'] = dataframes['castaways.csv']['result'].ca
 # Merge challenge_results and castaway_details dataframes on castaway_id
 castawayAll = pd.merge(dataframes['castaways.csv'], dataframes['castaway_details.csv'], on='castaway_id', how ="left")
 
+# Male = 1, Female = 2, Non-binary = 3
 castawayAll['genderNumber'] = np.where(castawayAll['gender'] == 'Male', 1,
                                      np.where(castawayAll['gender'] == 'Female', 2,
                                               np.where(castawayAll['gender'] == 'Non-binary', 3, 0)))
+
+# Binary on if the person was the sole survivor
 castawayAll['won'] = np.where(castawayAll['result'] == 'Sole Survivor', 1, 0)
 
 castawayAll = castawayAll.dropna(subset=['age'])
@@ -219,7 +222,7 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
         # Replace NaN values in 'challenge_wins' with 0
         x_test['challenge_wins'].fillna(0, inplace=True)
         
-        # TODO: Add appropiate challenge_wins data to x_train
+        # TODO: Add appropiate challenge wins data to x_train
         print(x_train)
                 
         # Using the SVM model to make predictions on who will be eliminated next.
