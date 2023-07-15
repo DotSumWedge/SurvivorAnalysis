@@ -149,12 +149,19 @@ def person_prediction_support_vector_machine(remaining_contestants, x_train_curr
       current_order is the orderOut value that is being predicted
     """
     
+    # print("remaining_contestants")
+    # print(remaining_contestants)
+    # print("x_train_current")
+    # print(x_train_current)
+    # print("y_train_current")
+    # print(y_train_current)
+    
     # Train the support vector machien model using a "one-vs-rest" decision function shape
     model = svm.SVC(decision_function_shape='ovo')
     model.fit(x_train_current, y_train_current)
 
     # Predict the order for the remaining contestants
-    x_test_current = remaining_contestants[['age', 'genderNumber']]
+    x_test_current = remaining_contestants[['age', 'genderNumber', 'immunityWins']]
     predicted_order = model.predict(x_test_current)
 
     # Find the contestants with the smallest predicted order
@@ -166,7 +173,7 @@ def person_prediction_support_vector_machine(remaining_contestants, x_train_curr
 
     return person_predicted
 
-def generate_challenge_features(current_season_version, current_season, current_episode_number, challenge_results):
+def generate_test_challenge_features(current_season_version, current_season, current_episode_number, challenge_results):
     # Filter the challenge results to include only rows up to the current episode, from the current version season, and from the current season
     challenge_results_current = challenge_results[(challenge_results['version_season'] == current_season_version) &
                                                   (challenge_results['season'] == current_season) &
@@ -175,12 +182,28 @@ def generate_challenge_features(current_season_version, current_season, current_
     # Generate a DataFrame of the number of wins for each castaway
     challenge_results_current = challenge_results_current[challenge_results_current['result'] == 'Won']\
                         .groupby('castaway_id')['result'].count().reset_index()\
-                        .rename(columns={'result': 'challenge_wins'})
+                        .rename(columns={'result': 'immunityWins'})
 
     # Set 'castaway_id' as the index
     challenge_results_current.set_index('castaway_id', inplace=True)
 
     return challenge_results_current
+
+def fix_train_challenge_features(x_train, current_season_version, current_season):
+    # # Identify contestants in x_train who are also in the current test set
+    # test_contestants = x_test['castaway_id'].unique()
+    # train_test_contestants = x_train[x_train['castaway_id'].isin(test_contestants)]
+
+    # # For these contestants, remove any challenge results from seasons that occur after the current season
+    # train_test_contestants = train_test_contestants[(train_test_contestants['version_season'] < current_season_version) |
+    #                                                 ((train_test_contestants['version_season'] == current_season_version) &
+    #                                                  (train_test_contestants['season'] <= current_season))]
+    
+    # print(train_test_contestants)
+
+    # # Update x_train to exclude future data for returning contestants in the test group
+    # x_train = pd.concat([x_train[~x_train['castaway_id'].isin(test_contestants)], train_test_contestants])
+    return x_train
 
 # Splitting the data into training and testing sets using LeaveOneGroupOut.
 multilevel_season_splitter = LeaveOneGroupOut()
@@ -193,10 +216,10 @@ accuracies_support_vector_machine = []
 
 for train_index, test_index in multilevel_season_splitter.split(season_split, groups=group_labels):
 
-    x_train = pd.concat([season_split[i][['age', 'genderNumber']] for i in train_index])
+    x_train = pd.concat([season_split[i][['age', 'genderNumber', 'immunityWins']] for i in train_index])
     y_train = pd.concat([season_split[i][['orderOut']] for i in train_index])
 
-    x_test = pd.concat([season_split[i][['age', 'genderNumber']] for i in test_index])
+    x_test = pd.concat([season_split[i][['age', 'genderNumber', 'immunityWins']] for i in test_index])
     y_test = pd.concat([season_split[i][['orderOut']] for i in test_index])
 
     remaining_contestants = len(x_test)
@@ -205,25 +228,23 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
     current_season = group_labels[test_index[0]] + 1
     current_episode_number = 0
     counter = 0
+    x_train = fix_train_challenge_features(x_train, current_season_version, current_season)
 
     while len(x_test) > 0:
         current_episode_number += 1
         
         # Update x_test to include updated challenge results
-        challenge_features = generate_challenge_features(current_season_version, current_season, current_episode_number, challenge_results)
+        challenge_features = generate_test_challenge_features(current_season_version, current_season, current_episode_number, challenge_results)
 
-        # Drop the 'challenge_wins' column from x_test if it exists
-        if 'challenge_wins' in x_test.columns:
-            x_test.drop('challenge_wins', axis=1, inplace=True)
+        # Drop the 'immunityWins' column from x_test if it exists
+        if 'immunityWins' in x_test.columns:
+            x_test.drop('immunityWins', axis=1, inplace=True)
         
         # Merge challenge_features into x_test
         x_test = x_test.merge(challenge_features, how='left', on='castaway_id')
         
-        # Replace NaN values in 'challenge_wins' with 0
-        x_test['challenge_wins'].fillna(0, inplace=True)
-        
-        # TODO: Add appropiate challenge wins data to x_train
-        print(x_train)
+        # Replace NaN values in 'immunityWins' with 0
+        x_test['immunityWins'].fillna(0, inplace=True)
                 
         # Using the SVM model to make predictions on who will be eliminated next.
         prediction_person_index = person_prediction_support_vector_machine(x_test, x_train, y_train)
@@ -236,16 +257,20 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
         x_test = x_test.iloc[1:]
           
         counter += 1
-        # # If the counter is 3, break the loop
+        # If the counter is 3, break the loop
         if counter == 3:
-            break
+             break
 
     # Calculate and print the accuracy of the model
     accuracy = (correct_elimination_predictions / remaining_contestants) * 100
     accuracies_support_vector_machine.append(accuracy)
     break
 
-def test_generate_challenge_features():
+print(accuracies_support_vector_machine)
+average_accuracy = sum(accuracies_support_vector_machine) / len(accuracies_support_vector_machine)
+print("Average Accuracy:", average_accuracy)
+
+def test_generate_test_challenge_features():
     # Create a DataFrame that mimics the structure of `challenge_results`
     challenge_results_test = pd.DataFrame({
         'season': [1, 1, 1, 1, 2, 2],
@@ -256,11 +281,11 @@ def test_generate_challenge_features():
     })
     
     # Test 1: Current season version is 'S01', current season is 1 and current episode is 2
-    result = generate_challenge_features('S01', 1, 2, challenge_results_test)
+    result = generate_test_challenge_features('S01', 1, 2, challenge_results_test)
     expected_result = pd.DataFrame({
         'castaway_id': ['A', 'B'],
-        'challenge_wins': [2, 1]
+        'immunityWins': [2, 1]
     }).set_index('castaway_id')
     pd.testing.assert_frame_equal(result, expected_result)
 
-test_generate_challenge_features()
+test_generate_test_challenge_features()
