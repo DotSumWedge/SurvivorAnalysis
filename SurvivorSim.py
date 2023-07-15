@@ -137,15 +137,15 @@ season_split = split_dataframe(castawayAll, 'version_season')
 for df in season_split:
     df['orderOut'] = range(1, len(df) + 1)
     
-def person_prediction_support_vector_machine(remaining_contestants, x_train_current, y_train_current, current_order):
+def person_prediction_support_vector_machine(remaining_contestants, x_train_current, y_train_current):
     """
     Use the Support Vector Machine (SVM) model to make a prediction on the next person to be eliminated from the game.
       Return the contestant remaining that has the lowest orderOut prediction
       An orderOut value of 1 means that person was the first eleminated and the hightest orderOut in that season is the winner
-      x_train is the age and gender of contestants in the training set
-      y_train is the orderOut for contestants in the training set
+      y_train_current is the orderOut for contestants in the training set
       current_order is the orderOut value that is being predicted
     """
+
     # Train the support vector machien model using a "one-vs-rest" decision function shape
     model = svm.SVC(decision_function_shape='ovo')
     model.fit(x_train_current, y_train_current)
@@ -197,7 +197,6 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
     y_test = pd.concat([season_split[i][['orderOut']] for i in test_index])
 
     remaining_contestants = len(x_test)
-    elimination_order = 1
     correct_elimination_predictions = 0
     current_season_version = season_split[test_index[0]]['version_season'].iloc[0]
     current_season = group_labels[test_index[0]] + 1
@@ -210,13 +209,10 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
         # Update x_test to include updated challenge results
         challenge_features = generate_challenge_features(current_season_version, current_season, current_episode_number, challenge_results)
         
-        print("challenge_features")
-        print(challenge_features)
-        
-        # x_test = x_test.merge(challenge_features, how='left', on='castaway_id')
+        x_test = x_test.merge(challenge_features, how='left', on='castaway_id')
         
         # Using the SVM model to make predictions on who will be eliminated next.
-        prediction_person_index = person_prediction_support_vector_machine(x_test, x_train, y_train, elimination_order)
+        prediction_person_index = person_prediction_support_vector_machine(x_test, x_train, y_train)
         
         # Check if the prediction is correct
         if prediction_person_index == 0:
@@ -224,12 +220,11 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
             
         # Remove the first element of x_test
         x_test = x_test.iloc[1:]
-        elimination_order = elimination_order + 1
           
         counter += 1
         # # If the counter is 3, break the loop
-        if counter == 3:
-            break
+        #if counter == 3:
+        break
 
     # Calculate and print the accuracy of the model
     accuracy = (correct_elimination_predictions / remaining_contestants) * 100
