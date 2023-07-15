@@ -110,10 +110,6 @@ castawayAll = castawayAll.merge(immunity_counts_df, how='left', left_index=True,
 # Fill NaN values with 0 - assuming that contestants who didn't win any immunity challenges are not present in the immunity_counts_df DataFrame
 castawayAll['immunityWins'].fillna(0, inplace=True)
 
-# # Print out the column names
-# print("Columns in the DataFrame:")
-# print(castawayAll.columns)
-
 # # Print out how many people got each number of immunity wins
 # print("\nNumber of immunity wins for contestants:")
 # print(castawayAll['immunityWins'].value_counts())
@@ -162,7 +158,7 @@ def person_prediction_support_vector_machine(remaining_contestants, x_train_curr
     min_predicted_order = np.min(predicted_order)
     contestants_with_min_order = np.where(predicted_order == min_predicted_order)[0]
 
-    # Randomly select one contestant from those with the smallest predicted order
+    # Randomly select one contestant from those tied with the smallest predicted order
     person_predicted = np.random.choice(contestants_with_min_order)
 
     return person_predicted
@@ -181,8 +177,6 @@ def generate_challenge_features(current_season_version, current_season, current_
     # Set 'castaway_id' as the index
     challenge_results_current.set_index('castaway_id', inplace=True)
 
-    # print("challenge_results_current:")
-    # print(challenge_results_current)
     return challenge_results_current
 
 # Splitting the data into training and testing sets using LeaveOneGroupOut.
@@ -191,10 +185,8 @@ multilevel_season_splitter = LeaveOneGroupOut()
 # Create a list of group labels corresponding to each DataFrame in season_split
 group_labels = [i for i, _ in enumerate(season_split)]
 
-# print(len(season_split))
-# print(len(group_labels))
-
-accuracies_support_vector_machine = []  # Create an empty list to store accuracies
+# Create an empty list to store accuracies
+accuracies_support_vector_machine = []
 
 for train_index, test_index in multilevel_season_splitter.split(season_split, groups=group_labels):
 
@@ -207,33 +199,13 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
     remaining_contestants = len(x_test)
     elimination_order = 1
     correct_elimination_predictions = 0
-    
     current_season_version = season_split[test_index[0]]['version_season'].iloc[0]
     current_season = group_labels[test_index[0]] + 1
     current_episode_number = 0
     counter = 0
-    
-    print(x_test)
-    print(y_test)
-    # print("current_season_version")
-    # print(current_season_version)
-    # print("season:")
-    # print(current_season)
-    # print("episode:")
-    # print(current_episode_number)
 
     while len(x_test) > 0:
         current_episode_number += 1
-        eliminated_contestant_age = x_test.iloc[0]['age']
-        eliminated_contestant_gender = x_test.iloc[0]['genderNumber']
-        
-        # print("-------------------------------------")
-        # print(f"Person prediction position: {prediction_person_index}")
-        # print(f"Person prediction age: {x_test.iloc[prediction_person_index]['age']}")
-        
-        # print(f"Person eleminated position: {prediction_person_index}")
-        # print(f"Person eleminated age: {eliminated_contestant_age}")
-        # print("-------------------------------------")
         
         # Update x_test to include updated challenge results
         challenge_features = generate_challenge_features(current_season_version, current_season, current_episode_number, challenge_results)
@@ -260,17 +232,9 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
             break
 
     # Calculate and print the accuracy of the model
-    # print("----------")
-    # print(remaining_contestants)
     accuracy = (correct_elimination_predictions / remaining_contestants) * 100
     accuracies_support_vector_machine.append(accuracy)
-    # print(f"Model Accuracy: {accuracy}%")
-    # print("----------")
     break
-    
-# print(x_test)
-# print(y_test)
-# print(accuracies_support_vector_machine)
 
 def test_generate_challenge_features():
     # Create a DataFrame that mimics the structure of `challenge_results`
