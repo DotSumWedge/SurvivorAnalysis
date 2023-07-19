@@ -238,6 +238,7 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
     current_season = group_labels[test_index[0]] + 1
     current_episode_number = 1
     counter = 0
+    counter2 = 0
     x_train, y_train = fix_train_challenge_features(x_train, y_train, x_test, current_season_version, current_season)
 
     while len(x_test) > 0:
@@ -278,12 +279,36 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
         # Calculate and print the accuracy of the model
         accuracy = (correct_prediction_count / remaining_contestants) * 100
         accuracies[model_name].append(accuracy)
-    break
+
+    counter2 += 1
+    if counter2 == 3:
+         break
 
 for model_name, accuracy_list in accuracies.items():
     print(f"Accuracies for {model_name}: {accuracy_list}")
     average_accuracy = sum(accuracy_list) / len(accuracy_list)
     print(f"Average Accuracy for {model_name}: {average_accuracy}")
+
+# Initialize a dictionary to hold average accuracies
+average_accuracies = {}
+
+for model_name, accuracy_list in accuracies.items():
+    average_accuracy = sum(accuracy_list) / len(accuracy_list)
+    average_accuracies[model_name] = average_accuracy
+
+# Convert the average accuracies dictionary to a pandas DataFrame
+average_accuracies_df = pd.DataFrame(list(average_accuracies.items()), columns=['Model', 'AverageAccuracy'])
+
+# Write the DataFrame to a CSV file
+average_accuracies_df.to_csv('/average_accuracies.csv', index=False)
+
+# Similarly, for each model's list of accuracies:
+for model_name, accuracy_list in accuracies.items():
+    # Convert the list of accuracies to a pandas DataFrame
+    accuracies_df = pd.DataFrame(accuracy_list, columns=['Accuracy'])
+    # Write the DataFrame to a CSV file
+    accuracies_df.to_csv(f'/accuracies_{model_name}.csv', index=False)
+
 
 def test_generate_test_challenge_features():
     # Create a DataFrame that mimics the structure of `challenge_results`
