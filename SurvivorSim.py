@@ -8,6 +8,9 @@ from sklearn import preprocessing
 from sklearn import svm
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import GradientBoostingClassifier, AdaBoostClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
@@ -15,6 +18,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split, LeaveOneGroupOut
 from sklearn.preprocessing import LabelEncoder
 from sklearn.exceptions import DataConversionWarning
+from xgboost import XGBClassifier
 from scipy import stats
 
 import tensorflow as tf
@@ -210,7 +214,15 @@ group_labels = [i for i, _ in enumerate(season_split)]
 models = [
     ("SVM", svm.SVC(decision_function_shape='ovo')),
     ("Random Forest", RandomForestClassifier()),
-    ("K Neighbors", KNeighborsClassifier()),
+    ("K Neighbors K=1", KNeighborsClassifier(n_neighbors=1)),
+    ("K Neighbors K=3", KNeighborsClassifier(n_neighbors=3)),
+    ("K Neighbors K=5", KNeighborsClassifier(n_neighbors=5)),
+    ("K Neighbors K=7", KNeighborsClassifier(n_neighbors=7)),
+    ("K Neighbors K=9", KNeighborsClassifier(n_neighbors=9)),
+    ("Decision Tree", DecisionTreeClassifier()),
+    ("Naive Bayes", GaussianNB()),
+    ("Gradient Boosting", GradientBoostingClassifier()),
+    ("AdaBoost", AdaBoostClassifier()),
 ]
 
 # Create an empty dictionary to store accuracies
@@ -227,12 +239,10 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
     x_test = pd.concat([season_split[i][['age', 'genderNumber']] for i in test_index])
     y_test = pd.concat([season_split[i][['orderOut']] for i in test_index])
 
-    remaining_contestants = len(x_test)
-    
+    number_starting_contestants = len(x_test)
     
     correct_elimination_predictions = 0
     correct_predictions = {model_name: 0 for model_name, _ in models}
-    
     
     current_season_version = season_split[test_index[0]]['version_season'].iloc[0]
     current_season = group_labels[test_index[0]] + 1
@@ -277,12 +287,12 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
     # Calculate and print the accuracy of the models
     for model_name, correct_prediction_count in correct_predictions.items():
         # Calculate and print the accuracy of the model
-        accuracy = (correct_prediction_count / remaining_contestants) * 100
+        accuracy = (correct_prediction_count / number_starting_contestants) * 100
         accuracies[model_name].append(accuracy)
 
-    counter2 += 1
-    if counter2 == 3:
-         break
+    # counter2 += 1
+    # if counter2 == 3:
+    # break
 
 for model_name, accuracy_list in accuracies.items():
     print(f"Accuracies for {model_name}: {accuracy_list}")
@@ -300,14 +310,14 @@ for model_name, accuracy_list in accuracies.items():
 average_accuracies_df = pd.DataFrame(list(average_accuracies.items()), columns=['Model', 'AverageAccuracy'])
 
 # Write the DataFrame to a CSV file
-average_accuracies_df.to_csv('/average_accuracies.csv', index=False)
+average_accuracies_df.to_csv('average_accuracies.csv', index=False)
 
 # Similarly, for each model's list of accuracies:
 for model_name, accuracy_list in accuracies.items():
     # Convert the list of accuracies to a pandas DataFrame
     accuracies_df = pd.DataFrame(accuracy_list, columns=['Accuracy'])
     # Write the DataFrame to a CSV file
-    accuracies_df.to_csv(f'/accuracies_{model_name}.csv', index=False)
+    accuracies_df.to_csv(f'accuracies_{model_name}.csv', index=False)
 
 
 def test_generate_test_challenge_features():
