@@ -189,21 +189,19 @@ def generate_test_challenge_features(current_season_version, current_season, cur
 
     return challenge_results_current
 
-def fix_train_challenge_features(x_train, current_season_version, current_season):
-    # # Identify contestants in x_train who are also in the current test set
-    # test_contestants = x_test['castaway_id'].unique()
-    # train_test_contestants = x_train[x_train['castaway_id'].isin(test_contestants)]
-
-    # # For these contestants, remove any challenge results from seasons that occur after the current season
-    # train_test_contestants = train_test_contestants[(train_test_contestants['version_season'] < current_season_version) |
-    #                                                 ((train_test_contestants['version_season'] == current_season_version) &
-    #                                                  (train_test_contestants['season'] <= current_season))]
+# Todo: include data from previous seasons. Not sure logic for the different versions.
+def fix_train_challenge_features(x_train, y_train, x_test, current_season_version, current_season):
+    # Identify contestants in x_train who are also in the current test set
+    test_contestants = x_test.index if 'castaway_id' not in x_test.columns else x_test['castaway_id']
     
-    # print(train_test_contestants)
+    # Remove these contestants from x_train
+    x_train = x_train[~x_train.index.isin(test_contestants)]
+    
+    # Remove these contestants from y_train
+    y_train = y_train[~y_train.index.isin(test_contestants)]
+    
+    return x_train, y_train
 
-    # # Update x_train to exclude future data for returning contestants in the test group
-    # x_train = pd.concat([x_train[~x_train['castaway_id'].isin(test_contestants)], train_test_contestants])
-    return x_train
 
 # Splitting the data into training and testing sets using LeaveOneGroupOut.
 multilevel_season_splitter = LeaveOneGroupOut()
@@ -219,7 +217,7 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
     x_train = pd.concat([season_split[i][['age', 'genderNumber', 'immunityWins']] for i in train_index])
     y_train = pd.concat([season_split[i][['orderOut']] for i in train_index])
 
-    x_test = pd.concat([season_split[i][['age', 'genderNumber', 'immunityWins']] for i in test_index])
+    x_test = pd.concat([season_split[i][['age', 'genderNumber']] for i in test_index])
     y_test = pd.concat([season_split[i][['orderOut']] for i in test_index])
 
     remaining_contestants = len(x_test)
@@ -228,7 +226,7 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
     current_season = group_labels[test_index[0]] + 1
     current_episode_number = 0
     counter = 0
-    x_train = fix_train_challenge_features(x_train, current_season_version, current_season)
+    x_train, y_train = fix_train_challenge_features(x_train, y_train, x_test, current_season_version, current_season)
 
     while len(x_test) > 0:
         current_episode_number += 1
@@ -258,13 +256,13 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
           
         counter += 1
         # If the counter is 3, break the loop
-        if counter == 3:
-             break
+        # if counter == 3:
+        #      break
 
     # Calculate and print the accuracy of the model
     accuracy = (correct_elimination_predictions / remaining_contestants) * 100
     accuracies_support_vector_machine.append(accuracy)
-    break
+    #break
 
 print(accuracies_support_vector_machine)
 average_accuracy = sum(accuracies_support_vector_machine) / len(accuracies_support_vector_machine)
@@ -279,7 +277,7 @@ def test_generate_test_challenge_features():
         'result': ['Won', 'Lost', 'Won', 'Won', 'Won', 'Lost'],
         'version_season': ['S01', 'S01', 'S01', 'S01', 'S02', 'S02']  # Add this line
     })
-    
+
     # Test 1: Current season version is 'S01', current season is 1 and current episode is 2
     result = generate_test_challenge_features('S01', 1, 2, challenge_results_test)
     expected_result = pd.DataFrame({
