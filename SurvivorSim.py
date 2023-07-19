@@ -113,20 +113,6 @@ castawayAll = castawayAll.merge(immunity_counts_df, how='left', left_index=True,
 # Fill NaN values with 0 - assuming that contestants who didn't win any immunity challenges are not present in the immunity_counts_df DataFrame
 castawayAll['immunityWins'].fillna(0, inplace=True)
 
-# # Print out how many people got each number of immunity wins
-# print("\nNumber of immunity wins for contestants:")
-# print(castawayAll['immunityWins'].value_counts())
-
-# # Print out details about the top 10 castaways with the most immunity wins
-# top_immunity_winners = castawayAll.nlargest(10, 'immunityWins')
-# print("\nTop 10 contestants with the most immunity wins:")
-# print(top_immunity_winners[['full_name_x', 'age', 'city', 'state', 'immunityWins']])
-
-# Once implemented, we can add this data to the x_train but x_test will have to be updated between each guess
-# # When creating your training and testing datasets, you should now include 'immunityWins' as a feature
-# x_train = pd.concat([season_split[i][['age', 'genderNumber', 'immunityWins']] for i in train_index])
-# x_test = pd.concat([season_split[i][['age', 'genderNumber', 'immunityWins']] for i in test_index])
-
 # Split dataframe into a list of dataframes grouped by column name
 def split_dataframe(df, column_name):
     groups = df.groupby(column_name)
