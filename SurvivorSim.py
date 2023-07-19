@@ -160,6 +160,10 @@ def person_prediction_support_vector_machine(remaining_contestants, x_train_curr
     return person_predicted
 
 def generate_test_challenge_features(current_season_version, current_season, current_episode_number, challenge_results):
+    """
+    Adds data from the current episode/version/season
+    """
+    
     # Filter the challenge results to include only rows up to the current episode, from the current version season, and from the current season
     challenge_results_current = challenge_results[(challenge_results['version_season'] == current_season_version) &
                                                   (challenge_results['season'] == current_season) &
@@ -175,8 +179,13 @@ def generate_test_challenge_features(current_season_version, current_season, cur
 
     return challenge_results_current
 
-# Todo: include data from previous seasons. Not sure logic for the different versions.
 def fix_train_challenge_features(x_train, y_train, x_test, current_season_version, current_season):
+    """
+    Removes contestants in the testing set from the training set so the model doesn't have data from the future
+
+    Todo: include data from previous seasons. Not sure how to figure out which seasons/versions are in the past and which are in the future.
+    """
+    
     # Identify contestants in x_train who are also in the current test set
     test_contestants = x_test.index if 'castaway_id' not in x_test.columns else x_test['castaway_id']
     
@@ -210,12 +219,11 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
     correct_elimination_predictions = 0
     current_season_version = season_split[test_index[0]]['version_season'].iloc[0]
     current_season = group_labels[test_index[0]] + 1
-    current_episode_number = 0
+    current_episode_number = 1
     counter = 0
     x_train, y_train = fix_train_challenge_features(x_train, y_train, x_test, current_season_version, current_season)
 
     while len(x_test) > 0:
-        current_episode_number += 1
         
         # Update x_test to include updated challenge results
         challenge_features = generate_test_challenge_features(current_season_version, current_season, current_episode_number, challenge_results)
@@ -239,7 +247,9 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
             
         # Remove the first element of x_test
         x_test = x_test.iloc[1:]
-          
+        
+        # Todo: Update how current_episode_number is updated. Contestants are usually eliminated more than once a day so current_episode_number is probably too high
+        current_episode_number += 1
         counter += 1
         # If the counter is 3, break the loop
         # if counter == 3:
