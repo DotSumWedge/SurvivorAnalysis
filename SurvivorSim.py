@@ -204,6 +204,15 @@ multilevel_season_splitter = LeaveOneGroupOut()
 # Create a list of group labels corresponding to each DataFrame in season_split
 group_labels = [i for i, _ in enumerate(season_split)]
 
+models = [
+    ("SVM", svm.SVC(decision_function_shape='ovo')),
+    ("Random Forest", RandomForestClassifier()),
+    ("K Neighbors", KNeighborsClassifier()),
+]
+
+# Create an empty dictionary to store accuracies
+accuracies = {model_name: [] for model_name, _ in models}
+
 # Create an empty list to store accuracies
 accuracies_support_vector_machine = []
 
@@ -258,7 +267,7 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
     # Calculate and print the accuracy of the model
     accuracy = (correct_elimination_predictions / remaining_contestants) * 100
     accuracies_support_vector_machine.append(accuracy)
-    #break
+    break
 
 print(accuracies_support_vector_machine)
 average_accuracy = sum(accuracies_support_vector_machine) / len(accuracies_support_vector_machine)
