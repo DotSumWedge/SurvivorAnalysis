@@ -125,25 +125,14 @@ season_split = split_dataframe(castawayAll, 'version_season')
 # Give each contestant which order they were eliminated from the show
 for df in season_split:
     df['orderOut'] = range(1, len(df) + 1)
-    
-def person_prediction_support_vector_machine(remaining_contestants, x_train_current, y_train_current):
+
+def person_prediction(model, remaining_contestants, x_train_current, y_train_current):
     """
-    Use the Support Vector Machine (SVM) model to make a prediction on the next person to be eliminated from the game.
-      Return the contestant remaining that has the lowest orderOut prediction
-      An orderOut value of 1 means that person was the first eleminated and the hightest orderOut in that season is the winner
-      y_train_current is the orderOut for contestants in the training set
-      current_order is the orderOut value that is being predicted
+    Use the specified model to make a prediction on the next person to be eliminated from the game.
+    ...
     """
     
-    # print("remaining_contestants")
-    # print(remaining_contestants)
-    # print("x_train_current")
-    # print(x_train_current)
-    # print("y_train_current")
-    # print(y_train_current)
-    
-    # Train the support vector machien model using a "one-vs-rest" decision function shape
-    model = svm.SVC(decision_function_shape='ovo')
+    # Train the model
     model.fit(x_train_current, y_train_current)
 
     # Predict the order for the remaining contestants
@@ -158,6 +147,20 @@ def person_prediction_support_vector_machine(remaining_contestants, x_train_curr
     person_predicted = np.random.choice(contestants_with_min_order)
 
     return person_predicted
+
+def models_predict(remaining_contestants, x_train_current, y_train_current, models):
+    """
+    Use each model in the models list to make a prediction on the next person to be eliminated from the game.
+    Returns a list of predictions, one for each model.
+    """
+    
+    predictions = []
+    for model_name, model in models:
+        prediction = person_prediction(model, remaining_contestants, x_train_current, y_train_current)
+        predictions.append((model_name, prediction))
+
+    return predictions
+
 
 def generate_test_challenge_features(current_season_version, current_season, current_episode_number, challenge_results):
     """
@@ -225,7 +228,12 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
     y_test = pd.concat([season_split[i][['orderOut']] for i in test_index])
 
     remaining_contestants = len(x_test)
+    
+    
     correct_elimination_predictions = 0
+    correct_predictions = {model_name: 0 for model_name, _ in models}
+    
+    
     current_season_version = season_split[test_index[0]]['version_season'].iloc[0]
     current_season = group_labels[test_index[0]] + 1
     current_episode_number = 1
@@ -246,14 +254,15 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
         
         # Replace NaN values in 'immunityWins' with 0
         x_test['immunityWins'].fillna(0, inplace=True)
-                
-        # Using the SVM model to make predictions on who will be eliminated next.
-        prediction_person_index = person_prediction_support_vector_machine(x_test, x_train, y_train)
+
+        predictions = models_predict(x_test, x_train, y_train, models) 
+        print(predictions)
         
-        # Check if the prediction is correct
-        if prediction_person_index == 0:
-            correct_elimination_predictions += 1
-            
+        for model_name, prediction_person_index in predictions:
+            # Check if the prediction is correct
+            if prediction_person_index == 0:
+                correct_predictions[model_name] += 1        
+
         # Remove the first element of x_test
         x_test = x_test.iloc[1:]
         
@@ -264,14 +273,17 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
         # if counter == 3:
         #      break
 
-    # Calculate and print the accuracy of the model
-    accuracy = (correct_elimination_predictions / remaining_contestants) * 100
-    accuracies_support_vector_machine.append(accuracy)
+    # Calculate and print the accuracy of the models
+    for model_name, correct_prediction_count in correct_predictions.items():
+        # Calculate and print the accuracy of the model
+        accuracy = (correct_prediction_count / remaining_contestants) * 100
+        accuracies[model_name].append(accuracy)
     break
 
-print(accuracies_support_vector_machine)
-average_accuracy = sum(accuracies_support_vector_machine) / len(accuracies_support_vector_machine)
-print("Average Accuracy:", average_accuracy)
+for model_name, accuracy_list in accuracies.items():
+    print(f"Accuracies for {model_name}: {accuracy_list}")
+    average_accuracy = sum(accuracy_list) / len(accuracy_list)
+    print(f"Average Accuracy for {model_name}: {average_accuracy}")
 
 def test_generate_test_challenge_features():
     # Create a DataFrame that mimics the structure of `challenge_results`
