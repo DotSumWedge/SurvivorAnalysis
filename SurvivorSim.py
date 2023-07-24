@@ -204,6 +204,16 @@ def fix_train_challenge_features(x_train, y_train, x_test, current_season_versio
     
     return x_train, y_train
 
+def calculate_current_episode_number(current_season_version, current_season):
+    
+    # Filter the dataframe to only the rows that match the current season version and season
+    df = dataframes['castaways.csv'][(dataframes['castaways.csv']['version'] == current_season_version) & (dataframes['castaways.csv']['season'] == current_season)]
+
+    # Find the maximum episode number
+    current_episode_number = df['episode'].max()
+
+    return current_episode_number
+
 
 # Splitting the data into training and testing sets using LeaveOneGroupOut.
 multilevel_season_splitter = LeaveOneGroupOut()
@@ -266,19 +276,24 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
         # Replace NaN values in 'immunityWins' with 0
         x_test['immunityWins'].fillna(0, inplace=True)
 
+        # 
         predictions = models_predict(x_test, x_train, y_train, models) 
-        print(predictions)
         
         for model_name, prediction_person_index in predictions:
             # Check if the prediction is correct
             if prediction_person_index == 0:
                 correct_predictions[model_name] += 1        
 
-        # Remove the first element of x_test
+        # Remove the first element of x_test and y_test
         x_test = x_test.iloc[1:]
+        y_test = y_test.iloc[1:]
+        
+        print(predictions)
         
         # Todo: Update how current_episode_number is updated. Contestants are usually eliminated more than once a day so current_episode_number is probably too high
         current_episode_number += 1
+        #current_episode_number = calculate_current_episode_number(current_season_version, current_season)
+        
         counter += 1
         # If the counter is 3, break the loop
         # if counter == 3:
@@ -292,7 +307,7 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
 
     # counter2 += 1
     # if counter2 == 3:
-    # break
+    break
 
 for model_name, accuracy_list in accuracies.items():
     print(f"Accuracies for {model_name}: {accuracy_list}")
