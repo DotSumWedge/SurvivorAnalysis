@@ -189,30 +189,48 @@ def generate_test_challenge_features(current_season_version, current_season, cur
 def fix_train_challenge_features(x_train, y_train, x_test, current_season_version, current_season):
     """
     Removes contestants in the testing set from the training set so the model doesn't have data from the future
-
-    Todo: include data from previous seasons. Not sure how to figure out which seasons/versions are in the past and which are in the future.
     """
     
     # Identify contestants in x_train who are also in the current test set
     test_contestants = x_test.index if 'castaway_id' not in x_test.columns else x_test['castaway_id']
     
-    # Remove these contestants from x_train
-    x_train = x_train[~x_train.index.isin(test_contestants)]
+    # Create a mask to identify rows in x_train where the contestant is in the test set
+    # and the version_season is the same but the season is not in the future
+    mask = ~(
+        x_train.index.isin(test_contestants) & 
+        ((x_train['version_season'] != current_season_version) | 
+        (x_train['version_season'] == current_season_version) & (x_train['season'] > current_season))
+    )
+
+    # Apply the mask to x_train and y_train
+    x_train = x_train[mask]
+    y_train = y_train[mask]
     
-    # Remove these contestants from y_train
-    y_train = y_train[~y_train.index.isin(test_contestants)]
+    # Remove the 'version_season' and 'season' columns from x_train
+    x_train = x_train.drop(columns=['version_season', 'season'])
     
     return x_train, y_train
 
-def calculate_current_episode_number(current_season_version, current_season):
+def calculate_current_episode_number(current_season_version, current_season, current_order_out):
     
-    # Filter the dataframe to only the rows that match the current season version and season
-    df = dataframes['castaways.csv'][(dataframes['castaways.csv']['version'] == current_season_version) & (dataframes['castaways.csv']['season'] == current_season)]
+    # Filter the dataframe to only the rows that match the current season version, season, and orderOut
+    df = dataframes['castaways.csv'][
+        (dataframes['castaways.csv']['version_season'] == current_season_version) & 
+        (dataframes['castaways.csv']['season'] == current_season) &
+        (dataframes['castaways.csv']['order'] == current_order_out)
+    ]
+    
+    if df.empty:
+        # If the DataFrame is empty, return the maximum episode number for the given season and version
+        max_episode = dataframes['castaways.csv'][
+            (dataframes['castaways.csv']['version_season'] == current_season_version) & 
+            (dataframes['castaways.csv']['season'] == current_season)
+        ]['episode'].max()
+        
+        return max_episode
+    else:
+        return df['episode'].iloc[0]
 
-    # Find the maximum episode number
-    current_episode_number = df['episode'].max()
-
-    return current_episode_number
 
 
 # Splitting the data into training and testing sets using LeaveOneGroupOut.
@@ -221,7 +239,18 @@ multilevel_season_splitter = LeaveOneGroupOut()
 # Create a list of group labels corresponding to each DataFrame in season_split
 group_labels = [i for i, _ in enumerate(season_split)]
 
+# Create a baseline model that randomly guesses
+class RandomClassifier:
+    def fit(self, X, y):
+        # This classifier doesn't learn anything from the data
+        pass
+
+    def predict(self, X):
+        # Choose a random index for each sample
+        return np.random.choice(X.shape[0], size=X.shape[0])
+
 models = [
+    ("Random", RandomClassifier()),
     ("SVM", svm.SVC(decision_function_shape='ovo')),
     ("Random Forest", RandomForestClassifier()),
     ("K Neighbors K=1", KNeighborsClassifier(n_neighbors=1)),
@@ -243,7 +272,7 @@ accuracies_support_vector_machine = []
 
 for train_index, test_index in multilevel_season_splitter.split(season_split, groups=group_labels):
 
-    x_train = pd.concat([season_split[i][['age', 'genderNumber', 'immunityWins']] for i in train_index])
+    x_train = pd.concat([season_split[i][['age', 'genderNumber', 'immunityWins', 'version_season', 'season']] for i in train_index])
     y_train = pd.concat([season_split[i][['orderOut']] for i in train_index])
 
     x_test = pd.concat([season_split[i][['age', 'genderNumber']] for i in test_index])
@@ -263,6 +292,12 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
 
     while len(x_test) > 0:
         
+        # Get the current_order_out value from y_test
+        current_order_out = y_test['orderOut'].iloc[0]
+        
+        # Calculate the current episode number
+        current_episode_number = calculate_current_episode_number(current_season_version, current_season, current_order_out)
+        
         # Update x_test to include updated challenge results
         challenge_features = generate_test_challenge_features(current_season_version, current_season, current_episode_number, challenge_results)
 
@@ -276,9 +311,10 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
         # Replace NaN values in 'immunityWins' with 0
         x_test['immunityWins'].fillna(0, inplace=True)
 
-        # 
+        # Save run the models and save their predictions
         predictions = models_predict(x_test, x_train, y_train, models) 
         
+        # Talley the correct predictions
         for model_name, prediction_person_index in predictions:
             # Check if the prediction is correct
             if prediction_person_index == 0:
@@ -288,12 +324,8 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
         x_test = x_test.iloc[1:]
         y_test = y_test.iloc[1:]
         
-        print(predictions)
-        
-        # Todo: Update how current_episode_number is updated. Contestants are usually eliminated more than once a day so current_episode_number is probably too high
-        current_episode_number += 1
-        #current_episode_number = calculate_current_episode_number(current_season_version, current_season)
-        
+        #print(predictions)
+
         counter += 1
         # If the counter is 3, break the loop
         # if counter == 3:
@@ -307,7 +339,7 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
 
     # counter2 += 1
     # if counter2 == 3:
-    break
+    #break
 
 for model_name, accuracy_list in accuracies.items():
     print(f"Accuracies for {model_name}: {accuracy_list}")
