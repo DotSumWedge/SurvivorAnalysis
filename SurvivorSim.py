@@ -33,6 +33,8 @@ import random
 
 warnings.filterwarnings("ignore", category=DataConversionWarning)
 
+print("Loaded libs")
+
 # Get the current working directory
 current_dir = os.getcwd()
 
