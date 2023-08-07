@@ -288,8 +288,6 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
     current_season_version = season_split[test_index[0]]['version_season'].iloc[0]
     current_season = group_labels[test_index[0]] + 1
     current_episode_number = 1
-    counter = 0
-    counter2 = 0
     x_train, y_train = fix_train_challenge_features(x_train, y_train, x_test, current_season_version, current_season)
 
     while len(x_test) > 0:
@@ -325,23 +323,12 @@ for train_index, test_index in multilevel_season_splitter.split(season_split, gr
         # Remove the first element of x_test and y_test
         x_test = x_test.iloc[1:]
         y_test = y_test.iloc[1:]
-        
-        #print(predictions)
-
-        counter += 1
-        # If the counter is 3, break the loop
-        # if counter == 3:
-        #      break
 
     # Calculate and print the accuracy of the models
     for model_name, correct_prediction_count in correct_predictions.items():
         # Calculate and print the accuracy of the model
         accuracy = (correct_prediction_count / number_starting_contestants) * 100
         accuracies[model_name].append(accuracy)
-
-    # counter2 += 1
-    # if counter2 == 3:
-    #break
 
 for model_name, accuracy_list in accuracies.items():
     print(f"Accuracies for {model_name}: {accuracy_list}")
